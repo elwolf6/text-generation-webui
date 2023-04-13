@@ -88,6 +88,8 @@ def load_quantized(model_name):
             model_type = 'opt'
         elif any((k in name for k in ['gpt-j', 'pygmalion-6b'])):
             model_type = 'gptj'
+        elif name == "instruct-12b" or name.count("pythia"):
+            model_type = 'gptneox'
         else:
             print("Can't determine model type from model name. Please specify it manually using --model_type "
                   "argument")
@@ -98,7 +100,7 @@ def load_quantized(model_name):
     # Select the appropriate load_quant function
     if shared.args.pre_layer and model_type == 'llama':
         load_quant = llama_inference_offload.load_quant
-    elif model_type in ('llama', 'opt', 'gptj'):
+    elif model_type in ('llama', 'opt', 'gptj','gptneox'):
         if shared.args.pre_layer:
             print("Warning: ignoring --pre_layer because it only works for llama model type.")
         load_quant = _load_quant
