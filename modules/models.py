@@ -146,7 +146,7 @@ def load_model(model_name):
                 if total_mem - suggestion < 800:
                     suggestion -= 1000
                 suggestion = int(round(suggestion / 1000))
-                print(f"\033[1;32;1mAuto-assiging --gpu-memory {suggestion} for your GPU to try to prevent out-of-memory errors.\nYou can manually set other values.\033[0;37;0m")
+                print(f"\033[1;32;1mAuto-assinging --gpu-memory {suggestion} for your GPU to try to prevent out-of-memory errors.\nYou can manually set other values.\033[0;37;0m")
 
                 max_memory = {0: f'{suggestion}GiB', 'cpu': f'{shared.args.cpu_memory or 99}GiB'}
                 params['max_memory'] = max_memory
