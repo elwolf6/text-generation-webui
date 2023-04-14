@@ -315,8 +315,13 @@ def create_model_menus():
                         shared.gradio['groupsize'] = gr.Dropdown(label="groupsize", choices=["None", 32, 64, 128], value=shared.args.groupsize if shared.args.groupsize > 0 else "None")
 
                     with gr.Column():
+<<<<<<< Updated upstream
                         shared.gradio['model_type'] = gr.Dropdown(label="model_type", choices=["None", "llama", "opt", "gptj"], value=shared.args.model_type or "None")
                         shared.gradio['pre_layer'] = gr.Slider(label="pre_layer", minimum=0, maximum=100, value=shared.args.pre_layer)
+=======
+                        components['model_type'] = gr.Dropdown(label="model_type", choices=["None", "llama", "opt", "gptj",'gptneox'], value=shared.args.model_type or "None")
+                        components['pre_layer'] = gr.Slider(label="pre_layer", minimum=0, maximum=100, value=shared.args.pre_layer)
+>>>>>>> Stashed changes
 
     with gr.Row():
         with gr.Column():
