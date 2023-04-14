@@ -76,6 +76,43 @@ def _load_quant(model, checkpoint, wbits, groupsize=-1, faster_kernel=False, exc
 
     return model
 
+def gptneox_load_quant(model, checkpoint, wbits, groupsize=-1):
+    from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+
+    config = GPTNeoXConfig.from_pretrained(model)
+
+    def noop(*args, **kwargs):
+        pass
+
+    torch.nn.init.kaiming_uniform_ = noop
+    torch.nn.init.uniform_ = noop
+    torch.nn.init.final_layer_normal_ = noop
+
+    torch.set_default_dtype(torch.half)
+    transformers.modeling_utils._init_weights = False
+    torch.set_default_dtype(torch.half)
+    model = GPTNeoXForCausalLM(config)
+    torch.set_default_dtype(torch.float)
+    model = model.eval()
+    layers = find_layers(model)
+    for name in ["embed_out"]:
+        if name in layers:
+            del layers[name]
+    make_quant(model, layers, wbits, groupsize)
+
+    del layers
+
+    print("Loading model ...")
+    if checkpoint.endswith(".safetensors"):
+        from safetensors.torch import load_file as safe_load
+
+        model.load_state_dict(safe_load(checkpoint))
+    else:
+        model.load_state_dict(torch.load(checkpoint))
+    model.seqlen = 2048
+    print("Done.")
+
+    return model
 
 def load_quantized(model_name):
 
@@ -100,12 +137,16 @@ def load_quantized(model_name):
     # Select the appropriate load_quant function
     if shared.args.pre_layer and model_type == 'llama':
         load_quant = llama_inference_offload.load_quant
-    elif model_type in ('llama', 'opt', 'gptj','gptneox'):
+    elif model_type == 'gptneox':
+        if shared.args.pre_layer:
+            print("Warning: ignoring --pre_layer because it only works for llama model type.")
+        load_quant = gptneox_load_quant
+    elif model_type in ('llama', 'opt', 'gptj'):
         if shared.args.pre_layer:
             print("Warning: ignoring --pre_layer because it only works for llama model type.")
         load_quant = _load_quant
     else:
-        print("Unknown pre-quantized model type specified. Only 'llama', 'opt' and 'gptj' are supported")
+        print("Unknown pre-quantized model type specified. Only 'llama', 'opt', 'gptj', and 'gptneox are supported")
         exit()
 
     # Locate the quantized model file
@@ -150,7 +191,7 @@ def load_quantized(model_name):
         model = load_quant(str(path_to_model), str(pt_path), shared.args.wbits, shared.args.groupsize, shared.args.pre_layer)
     else:
         threshold = False if model_type == 'gptj' else 128
-        model = load_quant(str(path_to_model), str(pt_path), shared.args.wbits, shared.args.groupsize, kernel_switch_threshold=threshold)
+        model = load_quant(str(path_to_model), str(pt_path), shared.args.wbits, shared.args.groupsize)
 
         # accelerate offload (doesn't work properly)
         if shared.args.gpu_memory or torch.cuda.device_count() > 1:
